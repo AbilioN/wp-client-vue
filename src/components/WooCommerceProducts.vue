@@ -51,18 +51,21 @@
           
           <div class="product-price">
             <span v-if="product.on_sale" class="original-price">
-              R$ {{ formatPrice(product.regular_price) }}
+              € {{ formatPrice(product.regular_price) }}
             </span>
             <span class="current-price">
-              R$ {{ formatPrice(product.price) }}
+              € {{ formatPrice(product.price) }}
             </span>
             <span v-if="product.on_sale" class="sale-badge">Oferta!</span>
           </div>
           
-          <div class="product-description" v-html="product.short_description"></div>
+          <div class="product-description" v-html="product.short_description || product.description"></div>
           
           <div class="product-meta">
             <span class="product-sku" v-if="product.sku">SKU: {{ product.sku }}</span>
+            <span class="product-category" v-if="product.categories && product.categories.length > 0">
+              {{ product.categories[0].name }}
+            </span>
             <span class="product-status" :class="product.status">{{ product.status }}</span>
           </div>
           
@@ -111,10 +114,8 @@ const loadProducts = async () => {
   error.value = null
   
   try {
-    const headers = authStore.getWooCommerceHeaders()
-    const response = await axios.get(`${API_BASE_URL}/wc/v3/products?per_page=50&status=publish`, {
-      headers
-    })
+    // Usar a API do WooCommerce com autenticação Bearer token
+    const response = await axios.get(`${API_BASE_URL}/wc/v3/products`)
     products.value = response.data
     filteredProducts.value = response.data
   } catch (err) {
@@ -401,6 +402,12 @@ onMounted(() => {
 .product-sku {
   color: #666;
   font-family: 'Courier New', monospace;
+}
+
+.product-category {
+  color: #667eea;
+  font-weight: 500;
+  font-size: 12px;
 }
 
 .product-status {
