@@ -9,6 +9,9 @@ import HomePage from '../components/HomePage.vue'
 import ProductManagement from '../components/ProductManagement.vue'
 import AuthenticatedRequest from '../components/AuthenticatedRequest.vue'
 import TokenTest from '../components/TokenTest.vue'
+import CartTest from '../components/CartTest.vue'
+import InterceptorTest from '../components/InterceptorTest.vue'
+import AuthDebug from '../components/AuthDebug.vue'
 
 const routes = [
   {
@@ -65,6 +68,24 @@ const routes = [
     path: '/token-test',
     name: 'TokenTest',
     component: TokenTest,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/cart-test',
+    name: 'CartTest',
+    component: CartTest,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/interceptor-test',
+    name: 'InterceptorTest',
+    component: InterceptorTest,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/auth-debug',
+    name: 'AuthDebug',
+    component: AuthDebug,
     meta: { requiresAuth: true }
   }
 ]

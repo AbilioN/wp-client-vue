@@ -2,10 +2,24 @@
   <div class="cart-container">
     <div class="cart-header">
       <h2>🛒 Seu Carrinho</h2>
-      <p v-if="cartItems.length === 0">Seu carrinho está vazio</p>
+      <div class="header-actions">
+        <button @click="loadCart" class="refresh-button" :disabled="loading">
+          <span v-if="loading" class="loading-spinner"></span>
+          {{ loading ? 'Carregando...' : 'Atualizar' }}
+        </button>
+      </div>
     </div>
 
-    <div v-if="cartItems.length === 0" class="empty-cart">
+    <div v-if="error" class="error-message">
+      {{ error }}
+    </div>
+
+    <div v-if="loading && !cart" class="loading-container">
+      <div class="loading-spinner large"></div>
+      <p>Carregando carrinho...</p>
+    </div>
+
+    <div v-else-if="!cart || cart.items.length === 0" class="empty-cart">
       <div class="empty-cart-icon">🛒</div>
       <h3>Carrinho Vazio</h3>
       <p>Adicione produtos ao seu carrinho para começar a comprar</p>
@@ -16,11 +30,11 @@
 
     <div v-else class="cart-content">
       <div class="cart-items">
-        <div v-for="item in cartItems" :key="item.id" class="cart-item">
+        <div v-for="item in cart.items" :key="item.key" class="cart-item">
           <div class="item-image">
             <img 
-              v-if="item.image" 
-              :src="item.image" 
+              v-if="item.images && item.images.length > 0" 
+              :src="item.images[0].src" 
               :alt="item.name"
             />
             <div v-else class="no-image">📦</div>
@@ -28,17 +42,20 @@
           
           <div class="item-details">
             <h3 class="item-name">{{ item.name }}</h3>
-            <p class="item-price">R$ {{ formatPrice(item.price) }}</p>
+            <p class="item-price">{{ formatPrice(item.prices.price) }}</p>
+            <p v-if="item.prices.regular_price !== item.prices.price" class="original-price">
+              {{ formatPrice(item.prices.regular_price) }}
+            </p>
           </div>
           
           <div class="item-quantity">
-            <button @click="decreaseQuantity(item)" class="quantity-btn">-</button>
+            <button @click="updateQuantity(item, item.quantity - 1)" class="quantity-btn" :disabled="item.quantity <= 1">-</button>
             <span class="quantity">{{ item.quantity }}</span>
-            <button @click="increaseQuantity(item)" class="quantity-btn">+</button>
+            <button @click="updateQuantity(item, item.quantity + 1)" class="quantity-btn">+</button>
           </div>
           
           <div class="item-total">
-            <span class="total-price">R$ {{ formatPrice(item.price * item.quantity) }}</span>
+            <span class="total-price">{{ formatPrice(item.prices.price * item.quantity) }}</span>
           </div>
           
           <button @click="removeItem(item)" class="remove-btn">
@@ -52,20 +69,30 @@
         
         <div class="summary-item">
           <span>Subtotal:</span>
-          <span>R$ {{ formatPrice(subtotal) }}</span>
+          <span>{{ formatPrice(cart.totals.total_items) }}</span>
         </div>
         
-        <div class="summary-item">
+        <div v-if="cart.totals.total_shipping" class="summary-item">
           <span>Frete:</span>
-          <span>R$ {{ formatPrice(shipping) }}</span>
+          <span>{{ formatPrice(cart.totals.total_shipping) }}</span>
+        </div>
+        
+        <div v-if="cart.totals.total_discount !== '0'" class="summary-item discount">
+          <span>Desconto:</span>
+          <span>-{{ formatPrice(cart.totals.total_discount) }}</span>
         </div>
         
         <div class="summary-item total">
           <span>Total:</span>
-          <span>R$ {{ formatPrice(total) }}</span>
+          <span>{{ formatPrice(cart.totals.total_price) }}</span>
+        </div>
+
+        <div class="cart-info">
+          <p><strong>Itens:</strong> {{ cart.items_count }}</p>
+          <p v-if="cart.items_weight > 0"><strong>Peso:</strong> {{ cart.items_weight }}kg</p>
         </div>
         
-        <button @click="checkout" class="checkout-button">
+        <button @click="checkout" class="checkout-button" :disabled="cart.items_count === 0">
           Finalizar Compra
         </button>
         
@@ -78,62 +105,108 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import axios from 'axios'
+
+const API_BASE_URL = 'http://localhost:8080/index.php?rest_route='
 
 const authStore = useAuthStore()
+const cart = ref(null)
+const loading = ref(false)
+const error = ref(null)
 
-// Mock do carrinho - em uma aplicação real, isso viria de um store
-const cartItems = ref([
-  {
-    id: 1,
-    name: 'Produto Exemplo',
-    price: 29.99,
-    quantity: 1,
-    image: null
+const loadCart = async () => {
+  loading.value = true
+  error.value = null
+  
+  try {
+    const response = await axios.get(`${API_BASE_URL}/wc/store/v1/cart`)
+    cart.value = response.data
+  } catch (err) {
+    error.value = 'Erro ao carregar carrinho: ' + (err.response && err.response.data && err.response.data.message || err.message)
+    console.error('Erro ao carregar carrinho:', err)
+  } finally {
+    loading.value = false
   }
-])
-
-const shipping = ref(10.00)
-
-const subtotal = computed(() => {
-  return cartItems.value.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-})
-
-const total = computed(() => {
-  return subtotal.value + shipping.value
-})
+}
 
 const formatPrice = (price) => {
-  return parseFloat(price).toFixed(2).replace('.', ',')
+  if (!price) return '€ 0,00'
+  const numericPrice = parseFloat(price)
+  return `€ ${numericPrice.toFixed(2).replace('.', ',')}`
 }
 
-const increaseQuantity = (item) => {
-  item.quantity++
-}
-
-const decreaseQuantity = (item) => {
-  if (item.quantity > 1) {
-    item.quantity--
+const updateQuantity = async (item, newQuantity) => {
+  if (newQuantity < 1) return
+  
+  loading.value = true
+  error.value = null
+  
+  try {
+    await axios.post(`${API_BASE_URL}/wc/store/v1/cart/update-item`, {
+      key: item.key,
+      quantity: newQuantity
+    })
+    
+    // Recarregar o carrinho após atualização
+    await loadCart()
+  } catch (err) {
+    error.value = 'Erro ao atualizar quantidade: ' + (err.response && err.response.data && err.response.data.message || err.message)
+    console.error('Erro ao atualizar quantidade:', err)
+  } finally {
+    loading.value = false
   }
 }
 
-const removeItem = (item) => {
-  const index = cartItems.value.indexOf(item)
-  if (index > -1) {
-    cartItems.value.splice(index, 1)
+const removeItem = async (item) => {
+  if (!confirm('Tem certeza que deseja remover este item?')) return
+  
+  loading.value = true
+  error.value = null
+  
+  try {
+    await axios.post(`${API_BASE_URL}/wc/store/v1/cart/remove-item`, {
+      key: item.key
+    })
+    
+    // Recarregar o carrinho após remoção
+    await loadCart()
+  } catch (err) {
+    error.value = 'Erro ao remover item: ' + (err.response && err.response.data && err.response.data.message || err.message)
+    console.error('Erro ao remover item:', err)
+  } finally {
+    loading.value = false
   }
 }
 
-const clearCart = () => {
-  if (confirm('Tem certeza que deseja limpar o carrinho?')) {
-    cartItems.value = []
+const clearCart = async () => {
+  if (!confirm('Tem certeza que deseja limpar o carrinho?')) return
+  
+  loading.value = true
+  error.value = null
+  
+  try {
+    await axios.post(`${API_BASE_URL}/wc/store/v1/cart/remove-items`)
+    
+    // Recarregar o carrinho após limpeza
+    await loadCart()
+  } catch (err) {
+    error.value = 'Erro ao limpar carrinho: ' + (err.response && err.response.data && err.response.data.message || err.message)
+    console.error('Erro ao limpar carrinho:', err)
+  } finally {
+    loading.value = false
   }
 }
 
 const checkout = () => {
-  alert('Funcionalidade de checkout será implementada aqui!')
+  // Redirecionar para o checkout do WooCommerce
+  window.open('http://localhost:8080/checkout/', '_blank')
 }
+
+onMounted(() => {
+  loadCart()
+})
 </script>
 
 <style scoped>
@@ -144,7 +217,9 @@ const checkout = () => {
 }
 
 .cart-header {
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 40px;
 }
 
@@ -152,12 +227,76 @@ const checkout = () => {
   color: #333;
   font-size: 28px;
   font-weight: 600;
-  margin: 0 0 8px 0;
+  margin: 0;
 }
 
-.cart-header p {
+.header-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.refresh-button {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: #5a67d8;
+  transform: translateY(-1px);
+}
+
+.refresh-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-spinner.large {
+  width: 40px;
+  height: 40px;
+  border-width: 3px;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-message {
+  background-color: #fee;
+  color: #c53030;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  border: 1px solid #feb2b2;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
   color: #666;
-  margin: 0;
 }
 
 .empty-cart {
@@ -265,6 +404,13 @@ const checkout = () => {
   margin: 0;
 }
 
+.original-price {
+  color: #6b7280;
+  text-decoration: line-through;
+  font-size: 12px;
+  margin: 0;
+}
+
 .item-quantity {
   display: flex;
   align-items: center;
@@ -356,6 +502,23 @@ const checkout = () => {
   padding-top: 16px;
 }
 
+.summary-item.discount {
+  color: #e53e3e;
+  font-weight: 500;
+}
+
+.cart-info {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.cart-info p {
+  margin: 8px 0;
+  font-size: 14px;
+  color: #666;
+}
+
 .checkout-button {
   width: 100%;
   background: #667eea;
@@ -370,9 +533,15 @@ const checkout = () => {
   transition: all 0.2s ease;
 }
 
-.checkout-button:hover {
+.checkout-button:hover:not(:disabled) {
   background: #5a67d8;
   transform: translateY(-1px);
+}
+
+.checkout-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .clear-cart-button {

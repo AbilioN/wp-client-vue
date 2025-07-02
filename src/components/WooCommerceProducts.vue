@@ -153,9 +153,28 @@ const handleImageError = (event) => {
   }
 }
 
-const addToCart = (product) => {
-  // Aqui você implementaria a lógica do carrinho
-  alert(`Produto "${product.name}" adicionado ao carrinho!`)
+const addToCart = async (product) => {
+  if (!product.purchasable) {
+    alert('Este produto não está disponível para compra')
+    return
+  }
+  
+  loading.value = true
+  error.value = null
+  
+  try {
+    await axios.post(`${API_BASE_URL}/wc/store/v1/cart/add-item`, {
+      id: product.id,
+      quantity: 1
+    })
+    
+    alert(`Produto "${product.name}" adicionado ao carrinho!`)
+  } catch (err) {
+    error.value = 'Erro ao adicionar ao carrinho: ' + (err.response && err.response.data && err.response.data.message || err.message)
+    console.error('Erro ao adicionar ao carrinho:', err)
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(() => {

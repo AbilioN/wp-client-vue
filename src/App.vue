@@ -17,6 +17,9 @@
           <div v-if="authStore.isLoggedIn" class="user-menu">
             <router-link to="/profile" class="nav-link">Perfil</router-link>
             <router-link to="/admin/products" class="nav-link">Gerenciar Produtos</router-link>
+            <router-link to="/cart-test" class="nav-link">🧪 Teste Carrinho</router-link>
+            <router-link to="/interceptor-test" class="nav-link">🔧 Teste Interceptors</router-link>
+            <router-link to="/auth-debug" class="nav-link">🔍 Debug Auth</router-link>
             <button @click="handleLogout" class="nav-button">
               <span>🚪</span>
               Sair
