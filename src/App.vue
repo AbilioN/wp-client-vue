@@ -11,15 +11,11 @@
         <div class="nav-menu">
           <router-link to="/products" class="nav-link">Produtos</router-link>
           <router-link to="/posts" class="nav-link">Posts</router-link>
+          <router-link to="/pwa-status" class="nav-link">PWA Status</router-link>
           <CartStatus v-if="authStore.isLoggedIn" />
           <div v-if="authStore.isLoggedIn" class="user-menu">
             <router-link to="/profile" class="nav-link">Perfil</router-link>
             <router-link to="/admin/products" class="nav-link">Gerenciar Produtos</router-link>
-            <router-link to="/cart-test" class="nav-link">🧪 Teste Carrinho</router-link>
-            <router-link to="/cart-login-test" class="nav-link">🛒 Teste Login Carrinho</router-link>
-            <router-link to="/nonce-test" class="nav-link">🔑 Teste Nonce</router-link>
-            <router-link to="/interceptor-test" class="nav-link">🔧 Teste Interceptors</router-link>
-            <router-link to="/auth-debug" class="nav-link">🔍 Debug Auth</router-link>
             <button @click="handleLogout" class="nav-button">
               <span>🚪</span>
               Sair
@@ -36,6 +32,10 @@
     <main class="main-content">
       <router-view />
     </main>
+    
+    <!-- Componentes PWA -->
+    <PWAInstall />
+    <OfflineIndicator />
   </div>
 </template>
 
@@ -44,6 +44,8 @@ import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import CartStatus from './components/CartStatus.vue'
+import PWAInstall from './components/PWAInstall.vue'
+import OfflineIndicator from './components/OfflineIndicator.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()

@@ -7,13 +7,7 @@ import WordPressPostDetail from '../components/WordPressPostDetail.vue'
 import WooCommerceProducts from '../components/WooCommerceProducts.vue'
 import HomePage from '../components/HomePage.vue'
 import ProductManagement from '../components/ProductManagement.vue'
-import AuthenticatedRequest from '../components/AuthenticatedRequest.vue'
-import TokenTest from '../components/TokenTest.vue'
-import CartTest from '../components/CartTest.vue'
-import InterceptorTest from '../components/InterceptorTest.vue'
-import AuthDebug from '../components/AuthDebug.vue'
-import CartLoginTest from '../components/CartLoginTest.vue'
-import NonceTest from '../components/NonceTest.vue'
+import PWAStatus from '../components/PWAStatus.vue'
 
 const routes = [
   {
@@ -61,46 +55,9 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    path: '/auth-examples',
-    name: 'AuthenticatedRequest',
-    component: AuthenticatedRequest,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/token-test',
-    name: 'TokenTest',
-    component: TokenTest,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/cart-test',
-    name: 'CartTest',
-    component: CartTest,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/interceptor-test',
-    name: 'InterceptorTest',
-    component: InterceptorTest,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/auth-debug',
-    name: 'AuthDebug',
-    component: AuthDebug,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/cart-login-test',
-    name: 'CartLoginTest',
-    component: CartLoginTest,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/nonce-test',
-    name: 'NonceTest',
-    component: NonceTest,
-    meta: { requiresAuth: true }
+    path: '/pwa-status',
+    name: 'PWAStatus',
+    component: PWAStatus
   }
 ]
 
