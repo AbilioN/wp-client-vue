@@ -1,13 +1,6 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
-
-const API_BASE_URL = 'http://localhost:8080/index.php?rest_route='
-
-// Credenciais do WooCommerce
-const WOOCOMMERCE_CONFIG = {
-  consumerKey: 'ck_605c6dee0d0fdb6cc4925865d803944a56018f33',
-  consumerSecret: 'cs_6a8f9f1921367bd4166cac4646bd7b951b687f67'
-}
+import { API_BASE_URL, WOOCOMMERCE_CONFIG } from '../config/api'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -18,7 +11,10 @@ export const useAuthStore = defineStore('auth', {
     userDisplayName: localStorage.getItem('wp_user_display_name') || null,
     isAuthenticated: false,
     loading: false,
-    error: null
+    error: null,
+    cart: JSON.parse(localStorage.getItem('wp_cart')) || null,
+    cartItemsCount: parseInt(localStorage.getItem('wp_cart_items_count')) || 0,
+    nonce: localStorage.getItem('wp_nonce') || null
   }),
 
   getters: {
@@ -29,11 +25,16 @@ export const useAuthStore = defineStore('auth', {
     getUserDisplayName: (state) => state.userDisplayName,
     isLoggedIn: (state) => state.isAuthenticated && state.token,
     getError: (state) => state.error,
-    getWooCommerceConfig: () => WOOCOMMERCE_CONFIG
+    getWooCommerceConfig: () => WOOCOMMERCE_CONFIG,
+    getCart: (state) => state.cart,
+    getCartItemsCount: (state) => state.cartItemsCount,
+    getNonce: (state) => state.nonce
   },
 
   actions: {
     async login(username, password) {
+
+      console.log('aqui comneçando login')
       this.loading = true
       this.error = null
       
@@ -76,6 +77,9 @@ export const useAuthStore = defineStore('auth', {
         this.setupAxiosInterceptors()
         
         console.log('🔐 Login bem-sucedido, token configurado:', token.substring(0, 20) + '...')
+        
+        // Verificar carrinho após login
+        await this.checkCartAfterLogin()
         
         return { success: true, user: this.user }
       } catch (error) {
@@ -132,6 +136,9 @@ export const useAuthStore = defineStore('auth', {
       this.userDisplayName = null
       this.isAuthenticated = false
       this.error = null
+      this.cart = null
+      this.cartItemsCount = 0
+      this.nonce = null
       
       // Remover dados do localStorage
       localStorage.removeItem('wp_token')
@@ -139,6 +146,9 @@ export const useAuthStore = defineStore('auth', {
       localStorage.removeItem('wp_user_nicename')
       localStorage.removeItem('wp_user_display_name')
       localStorage.removeItem('wp_user')
+      localStorage.removeItem('wp_cart')
+      localStorage.removeItem('wp_cart_items_count')
+      localStorage.removeItem('wp_nonce')
       
       // Remover header de autorização do axios
       delete axios.defaults.headers.common['Authorization']
@@ -176,12 +186,13 @@ export const useAuthStore = defineStore('auth', {
 
     // Método para inicializar o estado de autenticação
     initializeAuth() {
-      console.log('🚀 Inicializando autenticação...')
-      console.log('📦 Token no state:', this.token ? 'Presente' : 'Ausente')
-      console.log('📦 Token no localStorage:', localStorage.getItem('wp_token') ? 'Presente' : 'Ausente')
-      console.log('📦 Token no sessionStorage:', sessionStorage.getItem('wp_token') ? 'Presente' : 'Ausente')
+      // console.log('🚀 Inicializando autenticação...')
+      // console.log('📦 Token no state:', this.token ? 'Presente' : 'Ausente')
+      // console.log('📦 Token no localStorage:', localStorage.getItem('wp_token') ? 'Presente' : 'Ausente')
+      // console.log('📦 Token no sessionStorage:', sessionStorage.getItem('wp_token') ? 'Presente' : 'Ausente')
+      // console.log('🛒 Carrinho no localStorage:', localStorage.getItem('wp_cart') ? 'Presente' : 'Ausente')
       
-      // Configurar interceptors do axios
+      // // Configurar interceptors do axios
       this.setupAxiosInterceptors()
       
       if (this.token) {
@@ -189,7 +200,7 @@ export const useAuthStore = defineStore('auth', {
         
         // Configurar header de autorização global
         axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`
-        console.log('✅ Header global configurado com token')
+        // console.log('✅ Header global configurado com token')
         
         // Validar o token automaticamente
         this.validateToken().then(isValid => {
@@ -197,6 +208,8 @@ export const useAuthStore = defineStore('auth', {
             console.log('❌ Token inválido, fazendo logout automático')
           } else {
             console.log('✅ Token válido')
+            // Verificar carrinho se token for válido
+            this.checkCartAfterLogin()
           }
         })
       } else {
@@ -220,6 +233,121 @@ export const useAuthStore = defineStore('auth', {
       
       console.log('❌ Nenhum token disponível para forçar configuração')
       return false
+    },
+
+    // Verificar carrinho após login
+    async checkCartAfterLogin() {
+      try {
+        console.log('auwuw')
+        // console.log('🛒 Verificando carrinho após login...')
+        // console.log('🔍 URL da requisição:', `${API_BASE_URL}/wc/store/v1/cart`)
+        // console.log('🔍 Token disponível:', this.token ? 'Sim' : 'Não')
+        
+        const response = await axios.get(`${API_BASE_URL}/wc/store/v1/cart`)
+        // console.log('✅ Resposta recebida:', response)
+        // console.log('✅ Status da resposta:', response.status)
+        // console.log('✅ Headers da resposta:', response.headers)
+        // console.log('já passou')
+        
+        this.cart = response.data
+        this.cartItemsCount = response.data.items_count || 0
+        
+        // Salvar no localStorage
+        localStorage.setItem('wp_cart', JSON.stringify(response.data))
+        localStorage.setItem('wp_cart_items_count', this.cartItemsCount.toString())
+        
+        // Capturar nonce dos headers da resposta
+        const nonce = response.headers['nonce'] || response.headers['Nonce']
+        if (nonce) {
+          this.saveNonce(nonce)
+          // console.log('🔑 Nonce capturado dos headers:', nonce.substring(0, 20) + '...')
+        } else {
+          // console.log('⚠️ Nenhum nonce encontrado nos headers da resposta')
+          // console.log('🔍 Todos os headers disponíveis:', Object.keys(response.headers))
+        }
+        
+        console.log('✅ Carrinho carregado:', this.cartItemsCount, 'itens')
+        return response.data
+      } catch (error) {
+        console.error('❌ Erro ao verificar carrinho:')
+        console.error('❌ Mensagem:', error.message)
+        console.error('❌ Status:', error.response?.status)
+        console.error('❌ Data:', error.response?.data)
+        console.error('❌ Headers:', error.response?.headers)
+        console.error('❌ Config:', error.config)
+        return null
+      }
+    },
+
+    // Atualizar carrinho no store
+    updateCart(cartData, responseHeaders = null) {
+      this.cart = cartData
+      this.cartItemsCount = cartData.items_count || 0
+      
+      // Salvar no localStorage
+      localStorage.setItem('wp_cart', JSON.stringify(cartData))
+      localStorage.setItem('wp_cart_items_count', this.cartItemsCount.toString())
+      
+      // Capturar nonce dos headers se fornecido
+      if (responseHeaders) {
+        const nonce = responseHeaders['nonce'] || responseHeaders['Nonce']
+        if (nonce) {
+          this.saveNonce(nonce)
+          console.log('🔑 Nonce atualizado dos headers:', nonce.substring(0, 20) + '...')
+        }
+      }
+      
+      console.log('🔄 Carrinho atualizado:', this.cartItemsCount, 'itens')
+    },
+
+    // Limpar carrinho do store
+    clearCart() {
+      this.cart = null
+      this.cartItemsCount = 0
+      
+      // Remover do localStorage
+      localStorage.removeItem('wp_cart')
+      localStorage.removeItem('wp_cart_items_count')
+      
+      console.log('🧹 Carrinho limpo do store')
+    },
+
+    // Salvar nonce
+    saveNonce(nonce) {
+      this.nonce = nonce
+      localStorage.setItem('wp_nonce', nonce)
+      console.log('🔑 Nonce salvo:', nonce ? nonce.substring(0, 20) + '...' : 'null')
+    },
+
+    // Limpar nonce
+    clearNonce() {
+      this.nonce = null
+      localStorage.removeItem('wp_nonce')
+      console.log('🧹 Nonce limpo')
+    },
+
+    // Fazer requisição com nonce (para operações do carrinho)
+    async requestWithNonce(method, url, data = null) {
+      const nonce = this.nonce || localStorage.getItem('wp_nonce')
+      
+      const config = {
+        method,
+        url,
+        headers: {}
+      }
+      
+      if (data) {
+        config.data = data
+      }
+      
+      if (nonce) {
+        config.headers['X-WP-Nonce'] = nonce
+        console.log('🔑 Nonce adicionado para requisição:', nonce.substring(0, 20) + '...')
+      } else {
+        console.log('⚠️ Nenhum nonce disponível para a requisição')
+      }
+      
+      return axios(config)
     },
 
     // Configurar interceptors do axios
@@ -256,6 +384,9 @@ export const useAuthStore = defineStore('auth', {
             console.log('❌ Nenhum token encontrado em nenhuma fonte')
           }
           
+          // Não adicionar nonce automaticamente em todas as requisições
+          // O nonce será adicionado apenas nas requisições específicas que precisam
+          
           return config
         },
         (error) => {
@@ -272,6 +403,8 @@ export const useAuthStore = defineStore('auth', {
         },
         (error) => {
           console.log('❌ Erro na resposta:', error.config?.url, error.response?.status)
+          console.log('❌ Detalhes do erro:', error.response?.data)
+          console.log('❌ Headers da resposta:', error.response?.headers)
           
           if (error.response?.status === 401 || error.response?.status === 403) {
             // Token inválido ou expirado

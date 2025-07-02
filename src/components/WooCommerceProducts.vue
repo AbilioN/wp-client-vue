@@ -100,7 +100,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import axios from 'axios'
 
-const API_BASE_URL = 'http://localhost:8080/index.php?rest_route='
+import { API_BASE_URL } from '../config/api'
 
 const authStore = useAuthStore()
 const products = ref([])
@@ -163,10 +163,13 @@ const addToCart = async (product) => {
   error.value = null
   
   try {
-    await axios.post(`${API_BASE_URL}/wc/store/v1/cart/add-item`, {
+    const response = await authStore.requestWithNonce('POST', `${API_BASE_URL}/wc/store/v1/cart/add-item`, {
       id: product.id,
       quantity: 1
     })
+    
+    // Atualizar o store com os dados do carrinho
+    authStore.updateCart(response.data, response.headers)
     
     alert(`Produto "${product.name}" adicionado ao carrinho!`)
   } catch (err) {

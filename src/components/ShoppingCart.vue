@@ -109,7 +109,7 @@ import { ref, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import axios from 'axios'
 
-const API_BASE_URL = 'http://localhost:8080/index.php?rest_route='
+import { API_BASE_URL, WP_BASE_URL } from '../config/api'
 
 const authStore = useAuthStore()
 const cart = ref(null)
@@ -123,6 +123,9 @@ const loadCart = async () => {
   try {
     const response = await axios.get(`${API_BASE_URL}/wc/store/v1/cart`)
     cart.value = response.data
+    
+    // Atualizar o store com os dados do carrinho
+    authStore.updateCart(response.data, response.headers)
   } catch (err) {
     error.value = 'Erro ao carregar carrinho: ' + (err.response && err.response.data && err.response.data.message || err.message)
     console.error('Erro ao carregar carrinho:', err)
@@ -144,13 +147,16 @@ const updateQuantity = async (item, newQuantity) => {
   error.value = null
   
   try {
-    await axios.post(`${API_BASE_URL}/wc/store/v1/cart/update-item`, {
+    const response = await authStore.requestWithNonce('POST', `${API_BASE_URL}/wc/store/v1/cart/update-item`, {
       key: item.key,
       quantity: newQuantity
     })
     
-    // Recarregar o carrinho após atualização
-    await loadCart()
+    // Usar a resposta da operação em vez de recarregar
+    cart.value = response.data
+    
+    // Atualizar o store com os dados do carrinho
+    authStore.updateCart(response.data, response.headers)
   } catch (err) {
     error.value = 'Erro ao atualizar quantidade: ' + (err.response && err.response.data && err.response.data.message || err.message)
     console.error('Erro ao atualizar quantidade:', err)
@@ -166,12 +172,15 @@ const removeItem = async (item) => {
   error.value = null
   
   try {
-    await axios.post(`${API_BASE_URL}/wc/store/v1/cart/remove-item`, {
+    const response = await authStore.requestWithNonce('POST', `${API_BASE_URL}/wc/store/v1/cart/remove-item`, {
       key: item.key
     })
     
-    // Recarregar o carrinho após remoção
-    await loadCart()
+    // Usar a resposta da operação em vez de recarregar
+    cart.value = response.data
+    
+    // Atualizar o store com os dados do carrinho
+    authStore.updateCart(response.data, response.headers)
   } catch (err) {
     error.value = 'Erro ao remover item: ' + (err.response && err.response.data && err.response.data.message || err.message)
     console.error('Erro ao remover item:', err)
@@ -187,10 +196,13 @@ const clearCart = async () => {
   error.value = null
   
   try {
-    await axios.post(`${API_BASE_URL}/wc/store/v1/cart/remove-items`)
+    const response = await authStore.requestWithNonce('POST', `${API_BASE_URL}/wc/store/v1/cart/remove-items`)
     
-    // Recarregar o carrinho após limpeza
-    await loadCart()
+    // Usar a resposta da operação em vez de recarregar
+    cart.value = response.data
+    
+    // Atualizar o store com os dados do carrinho
+    authStore.updateCart(response.data, response.headers)
   } catch (err) {
     error.value = 'Erro ao limpar carrinho: ' + (err.response && err.response.data && err.response.data.message || err.message)
     console.error('Erro ao limpar carrinho:', err)
@@ -201,7 +213,7 @@ const clearCart = async () => {
 
 const checkout = () => {
   // Redirecionar para o checkout do WooCommerce
-  window.open('http://localhost:8080/checkout/', '_blank')
+  window.open(`${WP_BASE_URL}/checkout/`, '_blank')
 }
 
 onMounted(() => {
