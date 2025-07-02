@@ -341,7 +341,7 @@ export const useAuthStore = defineStore('auth', {
       }
       
       if (nonce) {
-        config.headers['X-WP-Nonce'] = nonce
+        config.headers['Nonce'] = nonce
         console.log('🔑 Nonce adicionado para requisição:', nonce.substring(0, 20) + '...')
       } else {
         console.log('⚠️ Nenhum nonce disponível para a requisição')
