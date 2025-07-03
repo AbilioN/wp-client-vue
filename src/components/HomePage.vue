@@ -1,58 +1,40 @@
 <template>
-  <div class="home-container">
+  <div class="home-page">
     <div class="hero-section">
-      <div class="hero-content">
-        <h1>Bem-vindo ao WordPress Store</h1>
-        <p>Explore nossos produtos e posts. Faça login apenas quando quiser comprar!</p>
-        <div class="hero-buttons">
-          <router-link to="/products" class="hero-button primary">
-            <span>🛍️</span>
-            Ver Produtos
-          </router-link>
-          <router-link to="/posts" class="hero-button secondary">
-            <span>📝</span>
-            Ler Posts
-          </router-link>
-        </div>
+      <h1>Bem-vindo à WordPress Store</h1>
+      <p>Uma loja online integrada com WordPress e WooCommerce</p>
+      <div class="hero-actions">
+        <router-link to="/products" class="btn-primary">
+          Ver Produtos
+        </router-link>
+        <router-link to="/posts" class="btn-secondary">
+          Ver Posts
+        </router-link>
       </div>
     </div>
-
+    
     <div class="features-section">
-      <div class="container">
-        <h2>O que você pode fazer aqui?</h2>
-        <div class="features-grid">
-          <div class="feature-card">
-            <div class="feature-icon">🛍️</div>
-            <h3>Comprar Produtos</h3>
-            <p>Explore nossa loja com produtos incríveis. Adicione ao carrinho e faça suas compras com segurança.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">📝</div>
-            <h3>Ler Posts</h3>
-            <p>Fique por dentro das novidades através dos nossos posts e artigos informativos.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">🔐</div>
-            <h3>Login Seguro</h3>
-            <p>Faça login apenas quando precisar comprar. Suas informações estão seguras conosco.</p>
-          </div>
+      <h2>Recursos</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🛍️</div>
+          <h3>Produtos WooCommerce</h3>
+          <p>Navegue pelos produtos da loja com preços e descrições detalhadas</p>
         </div>
-      </div>
-    </div>
-
-    <div class="cta-section">
-      <div class="container">
-        <div class="cta-content">
-          <h2>Pronto para começar?</h2>
-          <p>Explore nossos produtos ou leia nossos posts. O login é necessário apenas para compras.</p>
-          <div class="cta-buttons">
-            <router-link to="/products" class="cta-button">
-              Explorar Produtos
-            </router-link>
-            <router-link to="/posts" class="cta-button outline">
-              Ler Posts
-            </router-link>
-          </div>
+        <div class="feature-card">
+          <div class="feature-icon">📱</div>
+          <h3>PWA</h3>
+          <p>Instale como aplicativo e use offline</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔐</div>
+          <h3>Autenticação JWT</h3>
+          <p>Login seguro com tokens JWT</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🛒</div>
+          <h3>Carrinho de Compras</h3>
+          <p>Gerencie seu carrinho de compras</p>
         </div>
       </div>
     </div>
@@ -60,127 +42,116 @@
 </template>
 
 <script setup>
-// Componente simples, sem lógica adicional necessária
+import { onMounted } from 'vue'
+
+onMounted(() => {
+  console.log('HomePage: Componente montado')
+})
 </script>
 
 <style scoped>
-.home-container {
-  min-height: 100vh;
+.home-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
 .hero-section {
+  text-align: center;
+  padding: 60px 20px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 80px 20px;
-  text-align: center;
-}
-
-.hero-content {
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.hero-content h1 {
-  font-size: 3rem;
-  font-weight: 700;
-  margin-bottom: 20px;
-  line-height: 1.2;
-}
-
-.hero-content p {
-  font-size: 1.2rem;
+  border-radius: 12px;
   margin-bottom: 40px;
+}
+
+.hero-section h1 {
+  font-size: 2.5rem;
+  margin-bottom: 16px;
+  font-weight: 700;
+}
+
+.hero-section p {
+  font-size: 1.2rem;
+  margin-bottom: 32px;
   opacity: 0.9;
 }
 
-.hero-buttons {
+.hero-actions {
   display: flex;
-  gap: 20px;
+  gap: 16px;
   justify-content: center;
   flex-wrap: wrap;
 }
 
-.hero-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 32px;
-  border-radius: 12px;
+.btn-primary, .btn-secondary {
+  padding: 12px 24px;
+  border-radius: 8px;
   text-decoration: none;
   font-weight: 600;
-  font-size: 1.1rem;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
-.hero-button.primary {
+.btn-primary {
   background: white;
   color: #667eea;
 }
 
-.hero-button.primary:hover {
+.btn-primary:hover {
+  background: #f8fafc;
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
-.hero-button.secondary {
+.btn-secondary {
   background: transparent;
   color: white;
   border: 2px solid white;
 }
 
-.hero-button.secondary:hover {
+.btn-secondary:hover {
   background: white;
   color: #667eea;
-  transform: translateY(-2px);
 }
 
 .features-section {
-  padding: 80px 20px;
-  background: #f8fafc;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: 40px 0;
 }
 
 .features-section h2 {
   text-align: center;
-  font-size: 2.5rem;
-  font-weight: 600;
+  font-size: 2rem;
+  margin-bottom: 40px;
   color: #333;
-  margin-bottom: 60px;
 }
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 40px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
 }
 
 .feature-card {
   background: white;
-  padding: 40px 30px;
-  border-radius: 16px;
+  padding: 24px;
+  border-radius: 8px;
   text-align: center;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
 }
 
 .feature-card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-4px);
 }
 
 .feature-icon {
   font-size: 3rem;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .feature-card h3 {
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: 1.2rem;
+  margin-bottom: 12px;
   color: #333;
-  margin-bottom: 16px;
 }
 
 .feature-card p {
@@ -188,89 +159,22 @@
   line-height: 1.6;
 }
 
-.cta-section {
-  padding: 80px 20px;
-  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-  color: white;
-}
-
-.cta-content {
-  text-align: center;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.cta-content h2 {
-  font-size: 2.5rem;
-  font-weight: 600;
-  margin-bottom: 20px;
-}
-
-.cta-content p {
-  font-size: 1.2rem;
-  margin-bottom: 40px;
-  opacity: 0.9;
-}
-
-.cta-buttons {
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.cta-button {
-  padding: 16px 32px;
-  border-radius: 12px;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 1.1rem;
-  transition: all 0.3s ease;
-  background: white;
-  color: #667eea;
-}
-
-.cta-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-}
-
-.cta-button.outline {
-  background: transparent;
-  color: white;
-  border: 2px solid white;
-}
-
-.cta-button.outline:hover {
-  background: white;
-  color: #667eea;
-}
-
 @media (max-width: 768px) {
-  .hero-content h1 {
+  .hero-section h1 {
     font-size: 2rem;
   }
   
-  .hero-content p {
+  .hero-section p {
     font-size: 1rem;
   }
   
-  .features-section h2,
-  .cta-content h2 {
-    font-size: 2rem;
-  }
-  
-  .hero-buttons,
-  .cta-buttons {
+  .hero-actions {
     flex-direction: column;
     align-items: center;
   }
   
-  .hero-button,
-  .cta-button {
-    width: 100%;
-    max-width: 300px;
-    justify-content: center;
+  .features-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style> 

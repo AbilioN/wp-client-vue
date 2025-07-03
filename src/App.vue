@@ -12,6 +12,7 @@
           <router-link to="/products" class="nav-link">Produtos</router-link>
           <router-link to="/posts" class="nav-link">Posts</router-link>
           <router-link to="/pwa-status" class="nav-link">PWA Status</router-link>
+          <router-link to="/debug" class="nav-link">Debug</router-link>
           <CartStatus v-if="authStore.isLoggedIn" />
           <div v-if="authStore.isLoggedIn" class="user-menu">
             <router-link to="/profile" class="nav-link">Perfil</router-link>

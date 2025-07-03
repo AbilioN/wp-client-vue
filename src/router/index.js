@@ -8,6 +8,7 @@ import WooCommerceProducts from '../components/WooCommerceProducts.vue'
 import HomePage from '../components/HomePage.vue'
 import ProductManagement from '../components/ProductManagement.vue'
 import PWAStatus from '../components/PWAStatus.vue'
+import DebugApp from '../components/DebugApp.vue'
 
 const routes = [
   {
@@ -58,6 +59,11 @@ const routes = [
     path: '/pwa-status',
     name: 'PWAStatus',
     component: PWAStatus
+  },
+  {
+    path: '/debug',
+    name: 'Debug',
+    component: DebugApp
   }
 ]
 

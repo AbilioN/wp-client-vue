@@ -24,31 +24,66 @@ import { ref, onMounted } from 'vue'
 const showInstallPrompt = ref(false)
 
 onMounted(() => {
+  console.log('PWAInstall: Componente montado')
+  
+  // Verificar se já foi dispensado
+  const dismissed = localStorage.getItem('pwa-install-dismissed')
+  if (dismissed) {
+    const dismissedTime = parseInt(dismissed)
+    const now = Date.now()
+    const oneDay = 24 * 60 * 60 * 1000
+    
+    // Se foi dispensado há mais de 1 dia, mostrar novamente
+    if (now - dismissedTime > oneDay) {
+      localStorage.removeItem('pwa-install-dismissed')
+    } else {
+      console.log('PWAInstall: Banner dispensado recentemente')
+      return
+    }
+  }
+  
   // Listener para evento de instalação
-  window.addEventListener('beforeinstallprompt', (e) => {
-    console.log('🎉 Evento beforeinstallprompt capturado!')
+  const handleBeforeInstallPrompt = (e) => {
+    console.log('PWAInstall: Evento beforeinstallprompt capturado!')
     e.preventDefault()
     window.deferredPrompt = e
     showInstallPrompt.value = true
-  })
+  }
+  
+  window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+  
+  // Verificar se já existe um deferred prompt
+  if (window.deferredPrompt) {
+    console.log('PWAInstall: Deferred prompt já existe')
+    showInstallPrompt.value = true
+  }
+  
+  // Cleanup
+  return () => {
+    window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+  }
 })
 
 const installPWA = () => {
+  console.log('PWAInstall: Tentando instalar PWA...')
   if (window.deferredPrompt) {
     window.deferredPrompt.prompt()
     window.deferredPrompt.userChoice.then((choiceResult) => {
       if (choiceResult.outcome === 'accepted') {
-        console.log('✅ PWA instalada com sucesso!')
+        console.log('PWAInstall: ✅ PWA instalada com sucesso!')
       } else {
-        console.log('❌ Instalação cancelada')
+        console.log('PWAInstall: ❌ Instalação cancelada')
       }
       window.deferredPrompt = null
       showInstallPrompt.value = false
     })
+  } else {
+    console.log('PWAInstall: Nenhum deferred prompt disponível')
   }
 }
 
 const dismissInstall = () => {
+  console.log('PWAInstall: Banner dispensado')
   showInstallPrompt.value = false
   localStorage.setItem('pwa-install-dismissed', Date.now().toString())
 }
