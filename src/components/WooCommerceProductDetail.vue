@@ -19,6 +19,13 @@
       <p>Carregando produto...</p>
     </div>
 
+    <div v-else-if="!product && !authStore.isLoggedIn" class="empty-state">
+      <p>Faça login para visualizar os detalhes do produto</p>
+      <router-link to="/login" class="login-link">
+        Ir para Login
+      </router-link>
+    </div>
+    
     <div v-else-if="!product" class="empty-state">
       <p>Produto não encontrado</p>
     </div>
@@ -198,8 +205,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import axios from 'axios'
-
-const API_BASE_URL = 'http://localhost:8080/index.php?rest_route='
+import { API_BASE_URL } from '../config/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -222,7 +228,15 @@ const loadProduct = async () => {
   error.value = null
   
   try {
-    const response = await axios.get(`${API_BASE_URL}/wc/v3/products/${productId}`)
+    // Configurar headers com Bearer Token se disponível
+    const config = {}
+    if (authStore.token) {
+      config.headers = {
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    }
+    
+    const response = await axios.get(`${API_BASE_URL}/wc/v3/products/${productId}`, config)
     product.value = response.data
     
     // Definir imagem selecionada
@@ -232,6 +246,8 @@ const loadProduct = async () => {
   } catch (err) {
     if (err.response && err.response.status === 404) {
       error.value = 'Produto não encontrado'
+    } else if (err.response && err.response.status === 401) {
+      error.value = 'Acesso não autorizado. Faça login para visualizar este produto.'
     } else {
       error.value = 'Erro ao carregar produto: ' + (err.response && err.response.data && err.response.data.message || err.message)
     }
@@ -266,9 +282,31 @@ const getStockStatusText = (status) => {
   return statusMap[status] || status
 }
 
-const addToCart = (product) => {
-  // Implementar lógica do carrinho
-  alert(`Produto "${product.name}" adicionado ao carrinho!`)
+const addToCart = async (product) => {
+  if (!product.purchasable) {
+    alert('Este produto não está disponível para compra')
+    return
+  }
+  
+  loading.value = true
+  error.value = null
+  
+  try {
+    const response = await authStore.requestWithNonce('POST', `${API_BASE_URL}/wc/store/v1/cart/add-item`, {
+      id: product.id,
+      quantity: 1
+    })
+    
+    // Atualizar o store com os dados do carrinho
+    authStore.updateCart(response.data, response.headers)
+    
+    alert(`Produto "${product.name}" adicionado ao carrinho!`)
+  } catch (err) {
+    error.value = 'Erro ao adicionar ao carrinho: ' + (err.response && err.response.data && err.response.data.message || err.message)
+    console.error('Erro ao adicionar ao carrinho:', err)
+  } finally {
+    loading.value = false
+  }
 }
 
 const goBack = () => {
@@ -657,6 +695,23 @@ onMounted(() => {
   background: #f7fafc;
   color: #6b7280;
   cursor: not-allowed;
+}
+
+.login-link {
+  display: inline-block;
+  background: #667eea;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  margin-top: 16px;
+  transition: all 0.2s ease;
+}
+
+.login-link:hover {
+  background: #5a67d8;
+  transform: translateY(-1px);
 }
 
 .additional-info {

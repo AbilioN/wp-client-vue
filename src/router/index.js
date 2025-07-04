@@ -5,6 +5,7 @@ import UserProfile from '../components/UserProfile.vue'
 import WordPressPosts from '../components/WordPressPosts.vue'
 import WordPressPostDetail from '../components/WordPressPostDetail.vue'
 import WooCommerceProducts from '../components/WooCommerceProducts.vue'
+import WooCommerceProductDetail from '../components/WooCommerceProductDetail.vue'
 import HomePage from '../components/HomePage.vue'
 import ProductManagement from '../components/ProductManagement.vue'
 import PWAStatus from '../components/PWAStatus.vue'
@@ -30,6 +31,11 @@ const routes = [
     path: '/products',
     name: 'Products',
     component: WooCommerceProducts
+  },
+  {
+    path: '/products/:id',
+    name: 'ProductDetail',
+    component: WooCommerceProductDetail
   },
   {
     path: '/login',

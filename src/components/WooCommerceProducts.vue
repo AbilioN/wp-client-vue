@@ -28,6 +28,13 @@
       <p>Carregando produtos...</p>
     </div>
 
+    <div v-else-if="!authStore.isLoggedIn" class="empty-state">
+      <p>Faça login para visualizar os produtos</p>
+      <router-link to="/login" class="login-link">
+        Ir para Login
+      </router-link>
+    </div>
+    
     <div v-else-if="filteredProducts.length === 0" class="empty-state">
       <p>{{ searchTerm ? 'Nenhum produto encontrado para sua busca' : 'Nenhum produto disponível' }}</p>
     </div>
@@ -70,9 +77,12 @@
           </div>
           
           <div class="product-actions">
-            <a :href="product.permalink" target="_blank" class="view-button">
+            <!-- <a :href="product.permalink" target="_blank" class="view-button">
               Ver no Site
-            </a>
+            </a> -->
+            <router-link :to="`/products/${product.id}`" class="view-button">
+              Ver Detalhes
+            </router-link>
             <button 
               v-if="authStore.isLoggedIn" 
               @click="addToCart(product)" 
@@ -114,12 +124,23 @@ const loadProducts = async () => {
   error.value = null
   
   try {
-    // Usar a API do WooCommerce com autenticação Bearer token
-    const response = await axios.get(`${API_BASE_URL}/wc/v3/products`)
+    // Configurar headers com Bearer Token se disponível
+    const config = {}
+    if (authStore.token) {
+      config.headers = {
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    }
+    
+    const response = await axios.get(`${API_BASE_URL}/wc/v3/products`, config)
     products.value = response.data
     filteredProducts.value = response.data
   } catch (err) {
-    error.value = 'Erro ao carregar produtos: ' + (err.response && err.response.data && err.response.data.message || err.message)
+    if (err.response && err.response.status === 401) {
+      error.value = 'Acesso não autorizado. Faça login para visualizar os produtos.'
+    } else {
+      error.value = 'Erro ao carregar produtos: ' + (err.response && err.response.data && err.response.data.message || err.message)
+    }
     console.error('Erro ao carregar produtos:', err)
   } finally {
     loading.value = false
@@ -496,6 +517,23 @@ onMounted(() => {
 
 .login-to-buy:hover {
   background: #c53030;
+}
+
+.login-link {
+  display: inline-block;
+  background: #667eea;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  margin-top: 16px;
+  transition: all 0.2s ease;
+}
+
+.login-link:hover {
+  background: #5a67d8;
+  transform: translateY(-1px);
 }
 
 .products-footer {
