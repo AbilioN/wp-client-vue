@@ -276,11 +276,17 @@
            <div v-for="review in reviews" :key="review.id" class="review-item">
              <div class="review-header">
                <div class="reviewer-info">
-                 <span class="reviewer-name">{{ review.reviewer }}</span>
-                 <div class="review-rating">
-                   <span v-for="star in 5" :key="star" class="star" :class="{ filled: star <= review.rating }">
-                     ⭐
-                   </span>
+                 <div class="reviewer-avatar" v-if="review.reviewer_avatar_urls">
+                   <img :src="review.reviewer_avatar_urls['48']" :alt="review.reviewer" />
+                 </div>
+                 <div class="reviewer-details">
+                   <span class="reviewer-name">{{ review.reviewer }}</span>
+                   <div class="review-rating">
+                     <span v-for="star in 5" :key="star" class="star" :class="{ filled: star <= review.rating }">
+                       ⭐
+                     </span>
+                     <span class="rating-text">({{ review.rating }}/5)</span>
+                   </div>
                  </div>
                </div>
                <span class="review-date">{{ formatDate(review.date_created) }}</span>
@@ -309,6 +315,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import axios from 'axios'
 import { API_BASE_URL } from '../config/api'
+
+// Configurar axios para não usar cache
+axios.defaults.headers.common['Cache-Control'] = 'no-cache'
+axios.defaults.headers.common['Pragma'] = 'no-cache'
 
 const route = useRoute()
 const router = useRouter()
@@ -339,15 +349,8 @@ const loadProduct = async () => {
   error.value = null
   
   try {
-    // Configurar headers com Bearer Token se disponível
-    const config = {}
-    if (authStore.token) {
-      config.headers = {
-        'Authorization': `Bearer ${authStore.token}`
-      }
-    }
-    
-    const response = await axios.get(`${API_BASE_URL}/wc/v3/products/${productId}`, config)
+    // Tentar primeiro sem autenticação
+    let response = await axios.get(`${API_BASE_URL}/wc/v3/products/${productId}`)
     product.value = response.data
     
     // Definir imagem selecionada
@@ -355,14 +358,31 @@ const loadProduct = async () => {
       selectedImage.value = product.value.images[0]
     }
   } catch (err) {
-    if (err.response && err.response.status === 404) {
+    // Se falhar, tentar com autenticação
+    if (err.response && err.response.status === 401 && authStore.token) {
+      try {
+        const config = {
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`
+          }
+        }
+        response = await axios.get(`${API_BASE_URL}/wc/v3/products/${productId}`, config)
+        product.value = response.data
+        
+        // Definir imagem selecionada
+        if (product.value.images && product.value.images.length > 0) {
+          selectedImage.value = product.value.images[0]
+        }
+      } catch (authErr) {
+        error.value = 'Acesso não autorizado. Faça login para visualizar este produto.'
+        console.error('Erro ao carregar produto com autenticação:', authErr)
+      }
+    } else if (err.response && err.response.status === 404) {
       error.value = 'Produto não encontrado'
-    } else if (err.response && err.response.status === 401) {
-      error.value = 'Acesso não autorizado. Faça login para visualizar este produto.'
     } else {
       error.value = 'Erro ao carregar produto: ' + (err.response && err.response.data && err.response.data.message || err.message)
+      console.error('Erro ao carregar produto:', err)
     }
-    console.error('Erro ao carregar produto:', err)
   } finally {
     loading.value = false
   }
@@ -435,8 +455,8 @@ const loadReviews = async () => {
   
   if (!productId) return
   
-  // Só carregar reviews se o usuário estiver logado
-  if (!authStore.isLoggedIn) {
+  // Só carregar reviews se o usuário estiver logado e tiver token
+  if (!authStore.isLoggedIn || !authStore.token) {
     reviews.value = []
     return
   }
@@ -450,10 +470,15 @@ const loadReviews = async () => {
       }
     }
     
-    const response = await axios.get(`${API_BASE_URL}/wc/v3/products/reviews?product=${productId}`, config)
+    const url = `${API_BASE_URL}/wc/v3/products/reviews&product=${productId}`
+    
+    const response = await axios.get(url, config)
     reviews.value = response.data || []
   } catch (err) {
     console.error('Erro ao carregar avaliações:', err)
+    if (err.response && err.response.status === 401) {
+      console.log('Token inválido para reviews')
+    }
     reviews.value = []
   } finally {
     loadingReviews.value = false
@@ -1121,6 +1146,26 @@ watch(() => authStore.isLoggedIn, (isLoggedIn) => {
 
 .reviewer-info {
   display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reviewer-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.reviewer-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.reviewer-details {
+  display: flex;
   flex-direction: column;
   gap: 4px;
 }
@@ -1133,7 +1178,8 @@ watch(() => authStore.isLoggedIn, (isLoggedIn) => {
 
 .review-rating {
   display: flex;
-  gap: 2px;
+  align-items: center;
+  gap: 4px;
 }
 
 .star {
@@ -1143,6 +1189,12 @@ watch(() => authStore.isLoggedIn, (isLoggedIn) => {
 
 .star.filled {
   opacity: 1;
+}
+
+.rating-text {
+  font-size: 12px;
+  color: #6b7280;
+  margin-left: 4px;
 }
 
 .review-date {
@@ -1324,6 +1376,17 @@ watch(() => authStore.isLoggedIn, (isLoggedIn) => {
   .review-header {
     flex-direction: column;
     gap: 8px;
+  }
+  
+  .reviewer-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .reviewer-avatar {
+    width: 40px;
+    height: 40px;
   }
   
   .review-footer {

@@ -124,24 +124,30 @@ const loadProducts = async () => {
   error.value = null
   
   try {
-    // Configurar headers com Bearer Token se disponível
-    const config = {}
-    if (authStore.token) {
-      config.headers = {
-        'Authorization': `Bearer ${authStore.token}`
-      }
-    }
-    
-    const response = await axios.get(`${API_BASE_URL}/wc/v3/products`, config)
+    // Tentar primeiro sem autenticação
+    let response = await axios.get(`${API_BASE_URL}/wc/v3/products`)
     products.value = response.data
     filteredProducts.value = response.data
   } catch (err) {
-    if (err.response && err.response.status === 401) {
-      error.value = 'Acesso não autorizado. Faça login para visualizar os produtos.'
+    // Se falhar, tentar com autenticação
+    if (err.response && err.response.status === 401 && authStore.token) {
+      try {
+        const config = {
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`
+          }
+        }
+        response = await axios.get(`${API_BASE_URL}/wc/v3/products`, config)
+        products.value = response.data
+        filteredProducts.value = response.data
+      } catch (authErr) {
+        error.value = 'Acesso não autorizado. Faça login para visualizar os produtos.'
+        console.error('Erro ao carregar produtos com autenticação:', authErr)
+      }
     } else {
       error.value = 'Erro ao carregar produtos: ' + (err.response && err.response.data && err.response.data.message || err.message)
+      console.error('Erro ao carregar produtos:', err)
     }
-    console.error('Erro ao carregar produtos:', err)
   } finally {
     loading.value = false
   }
