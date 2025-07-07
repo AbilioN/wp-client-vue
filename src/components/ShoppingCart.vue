@@ -106,11 +106,13 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import axios from 'axios'
 
 import { API_BASE_URL, WP_BASE_URL } from '../config/api'
 
+const router = useRouter()
 const authStore = useAuthStore()
 const cart = ref(null)
 const loading = ref(false)
@@ -212,8 +214,8 @@ const clearCart = async () => {
 }
 
 const checkout = () => {
-  // Redirecionar para o checkout do WooCommerce
-  window.open(`${WP_BASE_URL}/checkout/`, '_blank')
+  // Redirecionar para o checkout interno
+  router.push('/checkout')
 }
 
 onMounted(() => {

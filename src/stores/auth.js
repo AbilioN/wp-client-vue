@@ -12,7 +12,36 @@ export const useAuthStore = defineStore('auth', {
     isAuthenticated: false,
     loading: false,
     error: null,
-    cart: JSON.parse(localStorage.getItem('wp_cart')) || null,
+    cart: (() => {
+      const savedCart = localStorage.getItem('wp_cart')
+      if (savedCart) {
+        try {
+          const parsed = JSON.parse(savedCart)
+          return {
+            items: parsed?.items || [],
+            totals: parsed?.totals || { 
+              total_items: 0, 
+              total_price: 0, 
+              total_shipping: 0, 
+              total_discount: 0 
+            },
+            items_count: parsed?.items_count || 0
+          }
+        } catch (e) {
+          console.error('Erro ao parsear carrinho salvo:', e)
+        }
+      }
+      return {
+        items: [],
+        totals: { 
+          total_items: 0, 
+          total_price: 0, 
+          total_shipping: 0, 
+          total_discount: 0 
+        },
+        items_count: 0
+      }
+    })(),
     cartItemsCount: parseInt(localStorage.getItem('wp_cart_items_count')) || 0,
     nonce: localStorage.getItem('wp_nonce') || null
   }),
@@ -107,24 +136,38 @@ export const useAuthStore = defineStore('auth', {
     async checkCartAfterLogin() {
       try {
         const response = await axios.get(`${API_BASE_URL}/wc/store/v1/cart`)
-        this.cart = response.data
-        this.cartItemsCount = response.data.items_count || 0
-        localStorage.setItem('wp_cart', JSON.stringify(response.data))
-        localStorage.setItem('wp_cart_items_count', this.cartItemsCount.toString())
-        const nonce = response.headers['nonce'] || response.headers['Nonce']
-        if (nonce) {
-          this.saveNonce(nonce)
-        }
+        this.updateCart(response.data, response.headers)
         return response.data
       } catch (error) {
+        // Em caso de erro, inicializar com carrinho vazio
+        this.updateCart({
+          items: [],
+          totals: { 
+            total_items: 0, 
+            total_price: 0, 
+            total_shipping: 0, 
+            total_discount: 0 
+          },
+          items_count: 0
+        })
         return null
       }
     },
 
     updateCart(cartData, responseHeaders = null) {
-      this.cart = cartData
-      this.cartItemsCount = cartData.items_count || 0
-      localStorage.setItem('wp_cart', JSON.stringify(cartData))
+      // Garantir que o carrinho tenha uma estrutura válida
+      this.cart = {
+        items: cartData?.items || [],
+        totals: cartData?.totals || { 
+          total_items: 0, 
+          total_price: 0, 
+          total_shipping: 0, 
+          total_discount: 0 
+        },
+        items_count: cartData?.items_count || 0
+      }
+      this.cartItemsCount = this.cart.items_count
+      localStorage.setItem('wp_cart', JSON.stringify(this.cart))
       localStorage.setItem('wp_cart_items_count', this.cartItemsCount.toString())
       if (responseHeaders) {
         const nonce = responseHeaders['nonce'] || responseHeaders['Nonce']
@@ -214,7 +257,16 @@ export const useAuthStore = defineStore('auth', {
       this.userNicename = null
       this.userDisplayName = null
       this.isAuthenticated = false
-      this.cart = null
+      this.cart = {
+        items: [],
+        totals: { 
+          total_items: 0, 
+          total_price: 0, 
+          total_shipping: 0, 
+          total_discount: 0 
+        },
+        items_count: 0
+      }
       this.cartItemsCount = 0
       this.nonce = null
       localStorage.removeItem('wp_token')
@@ -230,7 +282,16 @@ export const useAuthStore = defineStore('auth', {
     },
 
     clearCart() {
-      this.cart = null
+      this.cart = {
+        items: [],
+        totals: { 
+          total_items: 0, 
+          total_price: 0, 
+          total_shipping: 0, 
+          total_discount: 0 
+        },
+        items_count: 0
+      }
       this.cartItemsCount = 0
       localStorage.removeItem('wp_cart')
       localStorage.removeItem('wp_cart_items_count')

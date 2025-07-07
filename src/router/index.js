@@ -6,6 +6,7 @@ import WordPressPosts from '../components/WordPressPosts.vue'
 import WordPressPostDetail from '../components/WordPressPostDetail.vue'
 import WooCommerceProducts from '../components/WooCommerceProducts.vue'
 import WooCommerceProductDetail from '../components/WooCommerceProductDetail.vue'
+import Checkout from '../components/Checkout.vue'
 import HomePage from '../components/HomePage.vue'
 import ProductManagement from '../components/ProductManagement.vue'
 import PWAStatus from '../components/PWAStatus.vue'
@@ -53,6 +54,12 @@ const routes = [
     path: '/cart',
     name: 'Cart',
     component: () => import('../components/ShoppingCart.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/checkout',
+    name: 'Checkout',
+    component: Checkout,
     meta: { requiresAuth: true }
   },
   {
