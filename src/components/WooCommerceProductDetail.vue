@@ -197,11 +197,114 @@
         </div>
       </div>
     </div>
+
+    <!-- Seção de Comentários -->
+    <div class="reviews-section">
+      <h3>Avaliações e Comentários</h3>
+      
+      <div v-if="!authStore.isLoggedIn" class="login-to-review">
+        <p>Faça login para deixar uma avaliação</p>
+        <router-link to="/login" class="login-link">
+          Ir para Login
+        </router-link>
+      </div>
+      
+      <div v-else class="review-form">
+        <h4>Deixe sua avaliação</h4>
+        <form @submit.prevent="submitReview" class="review-form-content">
+          <div class="rating-input">
+            <label>Avaliação:</label>
+            <div class="stars">
+              <button 
+                v-for="star in 5" 
+                :key="star"
+                type="button"
+                @click="reviewRating = star"
+                class="star-button"
+                :class="{ active: star <= reviewRating }"
+              >
+                ⭐
+              </button>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="review-title">Título:</label>
+            <input
+              id="review-title"
+              v-model="reviewForm.title"
+              type="text"
+              placeholder="Título da sua avaliação"
+              required
+              maxlength="100"
+            />
+          </div>
+          
+          <div class="form-group">
+            <label for="review-content">Comentário:</label>
+            <textarea
+              id="review-content"
+              v-model="reviewForm.content"
+              placeholder="Conte sua experiência com este produto..."
+              required
+              rows="4"
+              maxlength="1000"
+            ></textarea>
+            <span class="char-count">{{ reviewForm.content.length }}/1000</span>
+          </div>
+          
+          <button type="submit" class="submit-review-btn" :disabled="submittingReview">
+            <span v-if="submittingReview" class="loading-spinner"></span>
+            {{ submittingReview ? 'Enviando...' : 'Enviar Avaliação' }}
+          </button>
+        </form>
+      </div>
+      
+      <div class="reviews-list">
+        <h4>Avaliações ({{ reviews.length }})</h4>
+        
+        <div v-if="loadingReviews" class="loading-reviews">
+          <div class="loading-spinner"></div>
+          <p>Carregando avaliações...</p>
+        </div>
+        
+        <div v-else-if="reviews.length === 0" class="no-reviews">
+          <p>Nenhuma avaliação ainda. Seja o primeiro a avaliar!</p>
+        </div>
+        
+                 <div v-else class="reviews-container">
+           <div v-for="review in reviews" :key="review.id" class="review-item">
+             <div class="review-header">
+               <div class="reviewer-info">
+                 <span class="reviewer-name">{{ review.reviewer }}</span>
+                 <div class="review-rating">
+                   <span v-for="star in 5" :key="star" class="star" :class="{ filled: star <= review.rating }">
+                     ⭐
+                   </span>
+                 </div>
+               </div>
+               <span class="review-date">{{ formatDate(review.date_created) }}</span>
+             </div>
+             
+             <div class="review-content" v-html="review.review"></div>
+             
+             <div class="review-footer">
+               <div v-if="review.status" class="review-status" :class="review.status">
+                 {{ getStatusText(review.status) }}
+               </div>
+               <div v-if="review.verified" class="verified-badge">
+                 ✓ Compra Verificada
+               </div>
+             </div>
+           </div>
+         </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import axios from 'axios'
@@ -215,6 +318,14 @@ const product = ref(null)
 const selectedImage = ref(null)
 const loading = ref(false)
 const error = ref(null)
+const reviews = ref([])
+const loadingReviews = ref(false)
+const submittingReview = ref(false)
+const reviewRating = ref(5)
+const reviewForm = ref({
+  title: '',
+  content: ''
+})
 
 const loadProduct = async () => {
   const productId = route.params.id
@@ -282,6 +393,16 @@ const getStockStatusText = (status) => {
   return statusMap[status] || status
 }
 
+const getStatusText = (status) => {
+  const statusMap = {
+    'approved': 'Aprovada',
+    'pending': 'Pendente',
+    'spam': 'Spam',
+    'trash': 'Lixeira'
+  }
+  return statusMap[status] || status
+}
+
 const addToCart = async (product) => {
   if (!product.purchasable) {
     alert('Este produto não está disponível para compra')
@@ -309,12 +430,96 @@ const addToCart = async (product) => {
   }
 }
 
+const loadReviews = async () => {
+  const productId = route.params.id
+  
+  if (!productId) return
+  
+  // Só carregar reviews se o usuário estiver logado
+  if (!authStore.isLoggedIn) {
+    reviews.value = []
+    return
+  }
+  
+  loadingReviews.value = true
+  
+  try {
+    const config = {
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    }
+    
+    const response = await axios.get(`${API_BASE_URL}/wc/v3/products/reviews?product=${productId}`, config)
+    reviews.value = response.data || []
+  } catch (err) {
+    console.error('Erro ao carregar avaliações:', err)
+    reviews.value = []
+  } finally {
+    loadingReviews.value = false
+  }
+}
+
+const submitReview = async () => {
+  if (!reviewForm.value.title.trim() || !reviewForm.value.content.trim()) {
+    alert('Por favor, preencha todos os campos')
+    return
+  }
+  
+  submittingReview.value = true
+  
+  try {
+    // Configurar headers com Bearer Token
+    const config = {
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    }
+    
+    const response = await axios.post(`${API_BASE_URL}/wc/v3/products/reviews`, {
+      product_id: parseInt(route.params.id),
+      reviewer: authStore.userDisplayName || authStore.userEmail,
+      reviewer_email: authStore.userEmail,
+      rating: reviewRating.value,
+      review: reviewForm.value.content,
+      review_title: reviewForm.value.title
+    }, config)
+    
+    // Limpar formulário
+    reviewForm.value = {
+      title: '',
+      content: ''
+    }
+    reviewRating.value = 5
+    
+    // Recarregar reviews
+    await loadReviews()
+    
+    alert('Avaliação enviada com sucesso!')
+  } catch (err) {
+    error.value = 'Erro ao enviar avaliação: ' + (err.response && err.response.data && err.response.data.message || err.message)
+    console.error('Erro ao enviar avaliação:', err)
+  } finally {
+    submittingReview.value = false
+  }
+}
+
 const goBack = () => {
   router.push('/products')
 }
 
 onMounted(() => {
   loadProduct()
+  loadReviews()
+})
+
+// Recarregar reviews quando o status de autenticação mudar
+watch(() => authStore.isLoggedIn, (isLoggedIn) => {
+  if (isLoggedIn) {
+    loadReviews()
+  } else {
+    reviews.value = []
+  }
 })
 </script>
 
@@ -714,6 +919,304 @@ onMounted(() => {
   transform: translateY(-1px);
 }
 
+/* Estilos para a seção de comentários */
+.reviews-section {
+  margin-top: 40px;
+  padding-top: 32px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.reviews-section h3 {
+  color: #1f2937;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 24px 0;
+}
+
+.login-to-review {
+  text-align: center;
+  padding: 32px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.login-to-review p {
+  color: #6b7280;
+  margin: 0 0 16px 0;
+}
+
+.review-form {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 32px;
+  border: 1px solid #e2e8f0;
+}
+
+.review-form h4 {
+  color: #1f2937;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 20px 0;
+}
+
+.review-form-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.rating-input {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rating-input label {
+  color: #374151;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.stars {
+  display: flex;
+  gap: 4px;
+}
+
+.star-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0.3;
+}
+
+.star-button.active {
+  opacity: 1;
+}
+
+.star-button:hover {
+  transform: scale(1.1);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.form-group label {
+  color: #374151;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 12px;
+  border: 2px solid #e1e5e9;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.char-count {
+  position: absolute;
+  bottom: -20px;
+  right: 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.submit-review-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  align-self: flex-start;
+}
+
+.submit-review-btn:hover:not(:disabled) {
+  background: #5a67d8;
+  transform: translateY(-1px);
+}
+
+.submit-review-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.reviews-list h4 {
+  color: #1f2937;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 20px 0;
+}
+
+.loading-reviews {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px;
+  color: #6b7280;
+}
+
+.loading-reviews .loading-spinner {
+  margin-bottom: 16px;
+}
+
+.no-reviews {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.reviews-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.review-item {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.reviewer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reviewer-name {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.review-rating {
+  display: flex;
+  gap: 2px;
+}
+
+.star {
+  font-size: 14px;
+  opacity: 0.3;
+}
+
+.star.filled {
+  opacity: 1;
+}
+
+.review-date {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.review-title {
+  color: #1f2937;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+}
+
+.review-content {
+  color: #374151;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.review-content :deep(p) {
+  margin: 0;
+}
+
+.review-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.review-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.review-status.approved {
+  background: #c6f6d5;
+  color: #22543d;
+}
+
+.review-status.pending {
+  background: #fef5e7;
+  color: #744210;
+}
+
+.review-status.spam {
+  background: #fed7d7;
+  color: #742a2a;
+}
+
+.review-status.trash {
+  background: #e2e8f0;
+  color: #4a5568;
+}
+
+.verified-badge {
+  background: #c6f6d5;
+  color: #22543d;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .additional-info {
   border-top: 1px solid #e5e7eb;
   padding-top: 32px;
@@ -816,6 +1319,29 @@ onMounted(() => {
   
   .additional-info {
     grid-template-columns: 1fr;
+  }
+  
+  .review-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .review-footer {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  
+  .review-form {
+    padding: 16px;
+  }
+  
+  .stars {
+    justify-content: center;
+  }
+  
+  .submit-review-btn {
+    width: 100%;
   }
 }
 </style> 
