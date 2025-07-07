@@ -228,17 +228,7 @@
             </div>
           </div>
           
-          <div class="form-group">
-            <label for="review-title">Título:</label>
-            <input
-              id="review-title"
-              v-model="reviewForm.title"
-              type="text"
-              placeholder="Título da sua avaliação"
-              required
-              maxlength="100"
-            />
-          </div>
+          <!-- Campo de título removido - não é obrigatório na API -->
           
           <div class="form-group">
             <label for="review-content">Comentário:</label>
@@ -333,7 +323,6 @@ const loadingReviews = ref(false)
 const submittingReview = ref(false)
 const reviewRating = ref(5)
 const reviewForm = ref({
-  title: '',
   content: ''
 })
 
@@ -486,8 +475,26 @@ const loadReviews = async () => {
 }
 
 const submitReview = async () => {
-  if (!reviewForm.value.title.trim() || !reviewForm.value.content.trim()) {
-    alert('Por favor, preencha todos os campos')
+  // Validar se o usuário está logado
+  if (!authStore.isLoggedIn || !authStore.token) {
+    alert('Você precisa estar logado para enviar uma avaliação')
+    return
+  }
+  
+  // Validar campos obrigatórios
+  if (!reviewForm.value.content.trim()) {
+    alert('Por favor, preencha o comentário')
+    return
+  }
+  
+  if (reviewRating.value < 1 || reviewRating.value > 5) {
+    alert('Por favor, selecione uma avaliação de 1 a 5 estrelas')
+    return
+  }
+  
+  // Validar se tem email do usuário
+  if (!authStore.userEmail) {
+    alert('Email do usuário não encontrado. Faça login novamente.')
     return
   }
   
@@ -497,22 +504,27 @@ const submitReview = async () => {
     // Configurar headers com Bearer Token
     const config = {
       headers: {
-        'Authorization': `Bearer ${authStore.token}`
+        'Authorization': `Bearer ${authStore.token}`,
+        'Content-Type': 'application/json'
       }
     }
     
-    const response = await axios.post(`${API_BASE_URL}/wc/v3/products/reviews`, {
+    const reviewData = {
       product_id: parseInt(route.params.id),
       reviewer: authStore.userDisplayName || authStore.userEmail,
       reviewer_email: authStore.userEmail,
-      rating: reviewRating.value,
       review: reviewForm.value.content,
-      review_title: reviewForm.value.title
-    }, config)
+      rating: reviewRating.value
+    }
+    
+    console.log('Enviando review:', reviewData)
+    
+    const response = await axios.post(`${API_BASE_URL}/wc/v3/products/reviews`, reviewData, config)
+    
+    console.log('Review enviado com sucesso:', response.data)
     
     // Limpar formulário
     reviewForm.value = {
-      title: '',
       content: ''
     }
     reviewRating.value = 5
@@ -520,10 +532,15 @@ const submitReview = async () => {
     // Recarregar reviews
     await loadReviews()
     
-    alert('Avaliação enviada com sucesso!')
+    // Mostrar mensagem de sucesso
+    alert('Avaliação enviada com sucesso! Sua avaliação será revisada antes de ser publicada.')
   } catch (err) {
-    error.value = 'Erro ao enviar avaliação: ' + (err.response && err.response.data && err.response.data.message || err.message)
     console.error('Erro ao enviar avaliação:', err)
+    if (err.response && err.response.data && err.response.data.message) {
+      error.value = 'Erro ao enviar avaliação: ' + err.response.data.message
+    } else {
+      error.value = 'Erro ao enviar avaliação. Tente novamente.'
+    }
   } finally {
     submittingReview.value = false
   }
