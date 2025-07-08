@@ -79,12 +79,12 @@
           <p>Carregando métodos de pagamento...</p>
         </div>
         
-        <div v-else-if="enabledPaymentMethods.length === 0" class="no-payment-methods">
-          <p>Nenhum método de pagamento habilitado no momento.</p>
+        <div v-if="paymentMethods.length === 0 && !loadingPaymentMethods" class="no-payment-methods">
+          <p>Nenhum método de pagamento disponível no momento.</p>
           <p class="payment-note">Entre em contato com o administrador para ativar métodos de pagamento.</p>
         </div>
         
-        <div v-else class="payment-methods">
+        <div v-else-if="paymentMethods.length > 0" class="payment-methods">
           <div 
             v-for="method in paymentMethods" 
             :key="method.id" 
@@ -95,6 +95,7 @@
             }"
             @click="method.enabled ? selectPaymentMethod(method.id) : null"
           >
+
             <div class="payment-method-header">
               <input 
                 type="radio" 
@@ -207,7 +208,9 @@ const loadPaymentMethods = async () => {
       }
     }
     
-    const response = await axios.get(`${API_BASE_URL}/wc/v3/payment_gateways`, config)
+    // Usar URL completa para métodos de pagamento
+    const paymentUrl = 'http://localhost:8080/index.php?rest_route=/wc/v3/payment_gateways'
+    const response = await axios.get(paymentUrl, config)
     paymentMethods.value = response.data || []
   } catch (err) {
     console.error('Erro ao carregar métodos de pagamento:', err)
@@ -498,6 +501,8 @@ onMounted(() => {
   color: #9ca3af;
   margin-top: 8px;
 }
+
+
 
 .empty-cart {
   text-align: center;
