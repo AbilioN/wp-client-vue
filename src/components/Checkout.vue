@@ -70,54 +70,295 @@
         </div>
       </div>
 
-      <!-- Seleção de Método de Pagamento -->
-      <div class="payment-section">
-        <h3>Método de Pagamento</h3>
-        
-        <div v-if="loadingPaymentMethods" class="loading-payment">
-          <div class="loading-spinner"></div>
-          <p>Carregando métodos de pagamento...</p>
-        </div>
-        
-        <div v-if="paymentMethods.length === 0 && !loadingPaymentMethods" class="no-payment-methods">
-          <p>Nenhum método de pagamento disponível no momento.</p>
-          <p class="payment-note">Entre em contato com o administrador para ativar métodos de pagamento.</p>
-        </div>
-        
-        <div v-else-if="paymentMethods.length > 0" class="payment-methods">
-          <div 
-            v-for="method in paymentMethods" 
-            :key="method.id" 
-            class="payment-method"
-            :class="{ 
-              selected: selectedPaymentMethod === method.id,
-              disabled: !method.enabled 
-            }"
-            @click="method.enabled ? selectPaymentMethod(method.id) : null"
-          >
-
-            <div class="payment-method-header">
+      <!-- Formulários -->
+      <div class="forms-column">
+        <!-- Dados de Faturamento -->
+        <div class="billing-section">
+          <h3>Dados de Faturamento</h3>
+          
+          <div class="form-group">
+            <label for="billing-first-name">Nome *</label>
+            <input 
+              type="text" 
+              id="billing-first-name" 
+              v-model="billingData.first_name" 
+              required
+              class="form-input"
+            />
+          </div>
+          
+          <div class="form-group">
+            <label for="billing-last-name">Sobrenome *</label>
+            <input 
+              type="text" 
+              id="billing-last-name" 
+              v-model="billingData.last_name" 
+              required
+              class="form-input"
+            />
+          </div>
+          
+          <div class="form-group">
+            <label for="billing-email">Email *</label>
+            <input 
+              type="email" 
+              id="billing-email" 
+              v-model="billingData.email" 
+              required
+              class="form-input"
+            />
+          </div>
+          
+          <div class="form-group">
+            <label for="billing-phone">Telefone *</label>
+            <input 
+              type="tel" 
+              id="billing-phone" 
+              v-model="billingData.phone" 
+              required
+              class="form-input"
+            />
+          </div>
+          
+          <div class="form-group">
+            <label for="billing-address">Endereço *</label>
+            <input 
+              type="text" 
+              id="billing-address" 
+              v-model="billingData.address_1" 
+              required
+              class="form-input"
+            />
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="billing-city">Cidade *</label>
               <input 
-                type="radio" 
-                :id="method.id" 
-                :value="method.id" 
-                v-model="selectedPaymentMethod"
-                class="payment-radio"
+                type="text" 
+                id="billing-city" 
+                v-model="billingData.city" 
+                required
+                class="form-input"
               />
-              <label :for="method.id" class="payment-label">
-                <h4>
-                  {{ method.title }}
-                  <span v-if="!method.enabled" class="disabled-badge">Desabilitado</span>
-                </h4>
-                <p class="payment-description">{{ method.description }}</p>
-              </label>
             </div>
             
-            <div v-if="method.settings && method.settings.instructions && method.settings.instructions.value" 
-                 class="payment-instructions">
-              <p><strong>Instruções:</strong></p>
-              <p v-html="method.settings.instructions.value"></p>
+            <div class="form-group">
+              <label for="billing-state">Estado/Província *</label>
+              <input 
+                type="text" 
+                id="billing-state" 
+                v-model="billingData.state" 
+                required
+                class="form-input"
+              />
             </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="billing-postcode">CEP *</label>
+              <input 
+                type="text" 
+                id="billing-postcode" 
+                v-model="billingData.postcode" 
+                required
+                class="form-input"
+              />
+            </div>
+            
+            <div class="form-group">
+              <label for="billing-country">País *</label>
+              <select 
+                id="billing-country" 
+                v-model="billingData.country" 
+                required
+                class="form-input"
+              >
+                <option value="PT">Portugal</option>
+                <option value="BR">Brasil</option>
+                <option value="ES">Espanha</option>
+                <option value="FR">França</option>
+                <option value="DE">Alemanha</option>
+                <option value="IT">Itália</option>
+                <option value="GB">Reino Unido</option>
+                <option value="US">Estados Unidos</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dados de Entrega -->
+        <div class="shipping-section">
+          <h3>Dados de Entrega</h3>
+          
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input 
+                type="checkbox" 
+                v-model="sameAsBilling"
+                class="checkbox-input"
+              />
+              <span>Usar mesmo endereço de faturamento</span>
+            </label>
+          </div>
+          
+          <div v-if="!sameAsBilling">
+            <div class="form-group">
+              <label for="shipping-first-name">Nome *</label>
+              <input 
+                type="text" 
+                id="shipping-first-name" 
+                v-model="shippingData.first_name" 
+                required
+                class="form-input"
+              />
+            </div>
+            
+            <div class="form-group">
+              <label for="shipping-last-name">Sobrenome *</label>
+              <input 
+                type="text" 
+                id="shipping-last-name" 
+                v-model="shippingData.last_name" 
+                required
+                class="form-input"
+              />
+            </div>
+            
+            <div class="form-group">
+              <label for="shipping-address">Endereço *</label>
+              <input 
+                type="text" 
+                id="shipping-address" 
+                v-model="shippingData.address_1" 
+                required
+                class="form-input"
+              />
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="shipping-city">Cidade *</label>
+                <input 
+                  type="text" 
+                  id="shipping-city" 
+                  v-model="shippingData.city" 
+                  required
+                  class="form-input"
+                />
+              </div>
+              
+              <div class="form-group">
+                <label for="shipping-city">Estado/Província *</label>
+                <input 
+                  type="text" 
+                  id="shipping-state" 
+                  v-model="shippingData.state" 
+                  required
+                  class="form-input"
+                />
+              </div>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="shipping-postcode">CEP *</label>
+                <input 
+                  type="text" 
+                  id="shipping-postcode" 
+                  v-model="shippingData.postcode" 
+                  required
+                  class="form-input"
+                />
+              </div>
+              
+              <div class="form-group">
+                <label for="shipping-country">País *</label>
+                <select 
+                  id="shipping-country" 
+                  v-model="shippingData.country" 
+                  required
+                  class="form-input"
+                >
+                  <option value="PT">Portugal</option>
+                  <option value="BR">Brasil</option>
+                  <option value="ES">Espanha</option>
+                  <option value="FR">França</option>
+                  <option value="DE">Alemanha</option>
+                  <option value="IT">Itália</option>
+                  <option value="GB">Reino Unido</option>
+                  <option value="US">Estados Unidos</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Seleção de Método de Pagamento -->
+        <div class="payment-section">
+          <h3>Método de Pagamento</h3>
+          
+          <div v-if="loadingPaymentMethods" class="loading-payment">
+            <div class="loading-spinner"></div>
+            <p>Carregando métodos de pagamento...</p>
+          </div>
+          
+          <div v-if="paymentMethods.length === 0 && !loadingPaymentMethods" class="no-payment-methods">
+            <p>Nenhum método de pagamento disponível no momento.</p>
+            <p class="payment-note">Entre em contato com o administrador para ativar métodos de pagamento.</p>
+          </div>
+          
+          <div v-else-if="paymentMethods.length > 0" class="payment-methods">
+            <div 
+              v-for="method in paymentMethods" 
+              :key="method.id" 
+              class="payment-method"
+              :class="{ 
+                selected: selectedPaymentMethod === method.id,
+                disabled: !method.enabled 
+              }"
+              @click="method.enabled ? selectPaymentMethod(method.id) : null"
+            >
+
+              <div class="payment-method-header">
+                <input 
+                  type="radio" 
+                  :id="method.id" 
+                  :value="method.id" 
+                  v-model="selectedPaymentMethod"
+                  class="payment-radio"
+                />
+                <label :for="method.id" class="payment-label">
+                  <h4>
+                    {{ method.title }}
+                    <span v-if="!method.enabled" class="disabled-badge">Desabilitado</span>
+                  </h4>
+                  <p class="payment-description">{{ method.description }}</p>
+                </label>
+              </div>
+              
+              <div v-if="method.settings && method.settings.instructions && method.settings.instructions.value" 
+                   class="payment-instructions">
+                <p><strong>Instruções:</strong></p>
+                <p v-html="method.settings.instructions.value"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Observações do Cliente -->
+        <div class="notes-section">
+          <h3>Observações do Pedido</h3>
+          <div class="form-group">
+            <label for="customer-notes">Observações (opcional)</label>
+            <textarea 
+              id="customer-notes" 
+              v-model="customerNote" 
+              class="form-textarea"
+              placeholder="Adicione observações especiais para o seu pedido..."
+              rows="4"
+            ></textarea>
           </div>
         </div>
       </div>
@@ -127,12 +368,12 @@
         <button 
           @click="processCheckout" 
           class="checkout-button"
-          :disabled="!selectedPaymentMethod || processingCheckout || enabledPaymentMethods.length === 0"
+          :disabled="!canProcessCheckout || processingCheckout"
         >
           <span v-if="processingCheckout" class="loading-spinner"></span>
           {{ 
-            processingCheckout ? 'Processando...' : 
-            enabledPaymentMethods.length === 0 ? 'Sem métodos de pagamento' : 
+            processingCheckout ? 'Processando Pedido...' : 
+            !canProcessCheckout ? 'Preencha todos os campos obrigatórios' : 
             'Finalizar Compra' 
           }}
         </button>
@@ -142,7 +383,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import axios from 'axios'
@@ -158,6 +399,68 @@ const loading = ref(false)
 const loadingPaymentMethods = ref(false)
 const processingCheckout = ref(false)
 const error = ref(null)
+
+// Dados de faturamento
+const billingData = ref({
+  first_name: '',
+  last_name: '',
+  address_1: '',
+  city: '',
+  state: '',
+  postcode: '',
+  country: 'PT',
+  email: '',
+  phone: ''
+})
+
+// Dados de entrega
+const shippingData = ref({
+  first_name: '',
+  last_name: '',
+  address_1: '',
+  city: '',
+  state: '',
+  postcode: '',
+  country: 'PT'
+})
+
+const sameAsBilling = ref(true)
+const customerNote = ref('')
+
+// Computed para verificar se pode processar o checkout
+const canProcessCheckout = computed(() => {
+  if (!selectedPaymentMethod.value) return false
+  
+  // Verificar dados de faturamento obrigatórios
+  const requiredBillingFields = ['first_name', 'last_name', 'address_1', 'city', 'state', 'postcode', 'country', 'email', 'phone']
+  const billingComplete = requiredBillingFields.every(field => billingData.value[field]?.trim())
+  
+  if (!billingComplete) return false
+  
+  // Se não usar mesmo endereço, verificar dados de entrega
+  if (!sameAsBilling.value) {
+    const requiredShippingFields = ['first_name', 'last_name', 'address_1', 'city', 'state', 'postcode', 'country']
+    const shippingComplete = requiredShippingFields.every(field => shippingData.value[field]?.trim())
+    if (!shippingComplete) return false
+  }
+  
+  return true
+})
+
+// Sincronizar dados de entrega com faturamento quando sameAsBilling for true
+watch(sameAsBilling, (newValue) => {
+  if (newValue) {
+    shippingData.value = {
+      first_name: billingData.value.first_name,
+      last_name: billingData.value.last_name,
+      address_1: billingData.value.address_1,
+      city: billingData.value.city,
+      state: billingData.value.state,
+      postcode: billingData.value.postcode,
+      country: billingData.value.country
+    }
+  }
+})
 
 const loadCart = async () => {
   loading.value = true
@@ -229,26 +532,87 @@ const selectPaymentMethod = (methodId) => {
 }
 
 const processCheckout = async () => {
-  if (!selectedPaymentMethod.value) {
-    alert('Por favor, selecione um método de pagamento')
+  if (!canProcessCheckout.value) {
+    alert('Por favor, preencha todos os campos obrigatórios')
     return
   }
   
   processingCheckout.value = true
+  error.value = null
   
   try {
-    // TODO: Implementar processamento do checkout
-    // Por enquanto, apenas simular o processo
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    // Obter o método de pagamento selecionado
+    const selectedMethod = paymentMethods.value.find(method => method.id === selectedPaymentMethod.value)
+    if (!selectedMethod) {
+      throw new Error('Método de pagamento não encontrado')
+    }
     
-    alert('Pedido processado com sucesso!')
-    // Redirecionar para página de sucesso ou limpar carrinho
+    // Preparar dados de entrega (usar dados de faturamento se sameAsBilling for true)
+    const finalShippingData = sameAsBilling.value ? {
+      first_name: billingData.value.first_name,
+      last_name: billingData.value.last_name,
+      address_1: billingData.value.address_1,
+      city: billingData.value.city,
+      state: billingData.value.state,
+      postcode: billingData.value.postcode,
+      country: billingData.value.country
+    } : shippingData.value
+    
+    // Preparar line_items do carrinho
+    const lineItems = cart.value.items.map(item => ({
+      product_id: item.id,
+      quantity: item.quantity
+    }))
+    
+    // Preparar payload do pedido
+    const orderData = {
+      payment_method: selectedPaymentMethod.value,
+      payment_method_title: selectedMethod.title,
+      set_paid: false,
+      billing: billingData.value,
+      shipping: finalShippingData,
+      line_items: lineItems,
+      customer_note: customerNote.value || ''
+    }
+    
+    console.log('Enviando pedido:', orderData)
+    
+    // Fazer requisição para criar o pedido
+    const config = {
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`,
+        'Content-Type': 'application/json'
+      }
+    }
+    
+    const orderUrl = 'http://localhost:8080/index.php?rest_route=/wc/v3/orders'
+    const response = await axios.post(orderUrl, orderData, config)
+    
+    console.log('Pedido criado com sucesso:', response.data)
+    
+    // Limpar carrinho após sucesso
+    await clearCart()
+    
+    // Redirecionar para página de sucesso
+    alert(`Pedido #${response.data.id} criado com sucesso!`)
     router.push('/')
+    
   } catch (err) {
-    error.value = 'Erro ao processar checkout: ' + (err.response && err.response.data && err.response.data.message || err.message)
     console.error('Erro ao processar checkout:', err)
+    error.value = 'Erro ao processar checkout: ' + (err.response?.data?.message || err.message)
   } finally {
     processingCheckout.value = false
+  }
+}
+
+const clearCart = async () => {
+  try {
+    // Limpar carrinho via API
+    await axios.delete(`${API_BASE_URL}/wc/store/v1/cart/items`)
+    // Atualizar store
+    authStore.updateCart({ items: [], totals: { total_items: 0, total_price: 0, total_shipping: 0, total_discount: 0 } })
+  } catch (err) {
+    console.error('Erro ao limpar carrinho:', err)
   }
 }
 
@@ -348,7 +712,23 @@ onMounted(() => {
 .checkout-content {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 40px;
+  gap: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.checkout-content > * {
+  min-width: 0;
+}
+
+.forms-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.forms-column > * {
+  margin-bottom: 0;
 }
 
 .cart-summary {
@@ -502,7 +882,88 @@ onMounted(() => {
   margin-top: 8px;
 }
 
+.billing-section, .shipping-section, .notes-section {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #f0f0f0;
+}
 
+.billing-section h3, .shipping-section h3, .notes-section h3 {
+  color: #1f2937;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 20px 0;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 14px;
+  color: #4b5563;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.form-input, .form-textarea, .form-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 16px;
+  color: #374151;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus, .form-textarea:focus, .form-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.form-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+  padding-top: 12px;
+}
+
+.form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%234b5563'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 1.5em;
+  padding-right: 3.5em;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #4b5563;
+  cursor: pointer;
+}
+
+.checkbox-input {
+  width: 18px;
+  height: 18px;
+  accent-color: #667eea;
+}
 
 .empty-cart {
   text-align: center;
@@ -600,6 +1061,10 @@ onMounted(() => {
   margin: 4px 0;
 }
 
+.notes-section {
+  margin-top: 0;
+}
+
 .checkout-actions {
   grid-column: 1 / -1;
   display: flex;
@@ -663,6 +1128,15 @@ onMounted(() => {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .form-row .form-group {
+    flex: none;
   }
 }
 </style> 
